@@ -99,6 +99,14 @@ func runSnapshift(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to create destination cluster clients: %w", err)
 	}
 
+	// Track created resources for cleanup on failure
+	var (
+		originSnapshotCreated = false
+		destContentCreated    = false
+		destSnapshotCreated   = false
+		destContentName       string
+	)
+
 	// Step 1: Get source PVC
 	fmt.Printf("Fetching PVC %s/%s from origin cluster...\n", pvcNamespace, pvcName)
 	sourcePVC, err := originK8sClient.CoreV1().PersistentVolumeClaims(pvcNamespace).Get(ctx, pvcName, metav1.GetOptions{})
@@ -114,6 +122,17 @@ func runSnapshift(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create origin snapshot: %w", err)
 	}
+	originSnapshotCreated = true
+
+	// Setup cleanup on failure
+	defer func() {
+		if err != nil {
+			cleanupOnFailure(context.Background(), originSnapClient, destSnapClient,
+				originSnapshotCreated, pvcNamespace, snapshotName,
+				destContentCreated, destContentName,
+				destSnapshotCreated, destNamespace, destSnapshotName)
+		}
+	}()
 
 	// Step 3: Wait for origin snapshot to be ready
 	fmt.Printf("Waiting for origin snapshot to be ready...\n")
@@ -134,17 +153,18 @@ func runSnapshift(cmd *cobra.Command, args []string) error {
 	}
 
 	if originContent.Status == nil || originContent.Status.SnapshotHandle == nil {
-		return fmt.Errorf("origin VolumeSnapshotContent does not have a snapshotHandle")
+		return fmt.Errorf("origin VolumeSnapshotContent does not have a snapshot handle")
 	}
-
 	snapshotHandle := *originContent.Status.SnapshotHandle
-	fmt.Printf("Origin snapshot handle: %s\n", snapshotHandle)
+	fmt.Printf("Found snapshot handle: %s\n", snapshotHandle)
 
 	// Step 5: Create VolumeSnapshotContent in destination cluster (with same snapshotHandle)
 	fmt.Printf("Creating VolumeSnapshotContent in destination cluster...\n")
-	destContentName := fmt.Sprintf("snapcontent-%s", destSnapshotName)
+	destContentName = fmt.Sprintf("snapcontent-%s", destSnapshotName)
 	destContent, err := createVolumeSnapshotContent(ctx, destSnapClient, destContentName, destNamespace, destSnapshotName, snapshotHandle, originContent)
 	if err != nil {
+		return fmt.Errorf("failed to create destination VolumeSnapshotContent: %w", err)
+		destSnapshotCreated = true
 		return fmt.Errorf("failed to create destination VolumeSnapshotContent: %w", err)
 	}
 	fmt.Printf("Created VolumeSnapshotContent: %s\n", destContent.Name)
@@ -345,4 +365,47 @@ func createPVCFromSnapshot(ctx context.Context, client *kubernetes.Clientset, na
 
 func stringPtr(s string) *string {
 	return &s
+}
+
+func cleanupOnFailure(ctx context.Context, originSnapClient, destSnapClient *snapshotclient.Clientset,
+	originSnapshotCreated bool, originNamespace, originSnapshotName string,
+	destContentCreated bool, destContentName string,
+	destSnapshotCreated bool, destNamespace, destSnapshotName string) {
+
+	fmt.Printf("\n⚠ Operation failed, cleaning up created resources...\n")
+
+	// Clean up destination snapshot
+	if destSnapshotCreated {
+		fmt.Printf("  Deleting destination snapshot %s/%s...\n", destNamespace, destSnapshotName)
+		err := destSnapClient.SnapshotV1().VolumeSnapshots(destNamespace).Delete(ctx, destSnapshotName, metav1.DeleteOptions{})
+		if err != nil {
+			fmt.Printf("  ✗ Failed to delete destination snapshot: %v\n", err)
+		} else {
+			fmt.Printf("  ✓ Deleted destination snapshot\n")
+		}
+	}
+
+	// Clean up destination snapshot content
+	if destContentCreated {
+		fmt.Printf("  Deleting destination VolumeSnapshotContent %s...\n", destContentName)
+		err := destSnapClient.SnapshotV1().VolumeSnapshotContents().Delete(ctx, destContentName, metav1.DeleteOptions{})
+		if err != nil {
+			fmt.Printf("  ✗ Failed to delete destination VolumeSnapshotContent: %v\n", err)
+		} else {
+			fmt.Printf("  ✓ Deleted destination VolumeSnapshotContent\n")
+		}
+	}
+
+	// Clean up origin snapshot
+	if originSnapshotCreated {
+		fmt.Printf("  Deleting origin snapshot %s/%s...\n", originNamespace, originSnapshotName)
+		err := originSnapClient.SnapshotV1().VolumeSnapshots(originNamespace).Delete(ctx, originSnapshotName, metav1.DeleteOptions{})
+		if err != nil {
+			fmt.Printf("  ✗ Failed to delete origin snapshot: %v\n", err)
+		} else {
+			fmt.Printf("  ✓ Deleted origin snapshot\n")
+			fmt.Printf("  ✓ Deleted origin snapshot\n")
+		}
+	}
+	fmt.Printf("Cleanup completed.\n\n")
 }
