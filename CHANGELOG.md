@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Automatic cleanup of created resources on operation failure
+
+### Fixed
+- Fixed errcheck linter error by properly handling `MarkFlagRequired` return value
+- Fixed cleanup of VolumeSnapshotContent in destination cluster when operation fails
+
+## [0.1.0] - 2025-12-09
+
+### Added
 - Initial release of SnapShift
 - Support for creating snapshots of PVCs in origin cluster
 - Replication of snapshots to destination cluster using same snapshotHandle
@@ -19,6 +28,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Support for VolumeSnapshotClass specification
 - Comprehensive CLI with cobra framework
 - Detailed logging and progress feedback
+- Core snapshot migration functionality
+- Basic CLI interface
+- Support for Kubernetes 1.17+ with CSI snapshots
+- Integration with external-snapshotter v6
 
 ### Documentation
 - README with installation and usage instructions
@@ -26,14 +39,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - EXAMPLES with common usage scenarios
 - ARCHITECTURE documentation explaining design decisions
 - Contributing guidelines
-
-## [0.1.0] - 2025-12-09
-
-### Added
-- Initial development release
-- Core snapshot migration functionality
-- Basic CLI interface
-- Support for Kubernetes 1.17+ with CSI snapshots
-- Integration with external-snapshotter v6
 
 [0.1.0]: https://github.com/fabiorauber/snapshift/releases/tag/v0.1.0
