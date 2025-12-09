@@ -3,9 +3,6 @@
 # Build binary
 snapshift
 
-# Go modules
-go.sum
-
 # IDE
 .idea/
 .vscode/
