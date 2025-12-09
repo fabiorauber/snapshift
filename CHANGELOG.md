@@ -7,12 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- None
+
+## [0.1.1] - 2025-12-09
+
 ### Added
 - Automatic cleanup of created resources on operation failure
+- Default destination PVC name to match source PVC name (no longer required to specify `--dest-pvc-name`)
+- `--create-namespace` flag to automatically create destination namespace if it doesn't exist
 
-### Fixed
-- Fixed errcheck linter error by properly handling `MarkFlagRequired` return value
-- Fixed cleanup of VolumeSnapshotContent in destination cluster when operation fails
+[0.1.1]: https://github.com/fabiorauber/snapshift/releases/tag/v0.1.1
 
 ## [0.1.0] - 2025-12-09
 
