@@ -50,7 +50,7 @@ func init() {
 	rootCmd.Flags().StringVar(&snapshotName, "snapshot-name", "", "Name for the snapshot (defaults to <pvc-name>-snapshot-<timestamp>)")
 	rootCmd.Flags().StringVar(&destSnapshotName, "dest-snapshot-name", "", "Name for destination snapshot (defaults to same as origin)")
 	rootCmd.Flags().BoolVar(&createPVC, "create-pvc", false, "Create a PVC from the snapshot in destination cluster")
-	rootCmd.Flags().StringVar(&destPVCName, "dest-pvc-name", "", "Name for the destination PVC (required if --create-pvc is set)")
+	rootCmd.Flags().StringVar(&destPVCName, "dest-pvc-name", "", "Name for the destination PVC (defaults to same as source PVC)")
 	rootCmd.Flags().StringVar(&destNamespace, "dest-namespace", "", "Destination namespace (defaults to same as source)")
 	rootCmd.Flags().StringVar(&snapshotClass, "snapshot-class", "", "VolumeSnapshotClass name (optional, uses default if not specified)")
 	rootCmd.Flags().DurationVar(&timeout, "timeout", 10*time.Minute, "Timeout for snapshot operations")
@@ -82,7 +82,7 @@ func runSnapshift(cmd *cobra.Command, args []string) error {
 		destNamespace = pvcNamespace
 	}
 	if createPVC && destPVCName == "" {
-		return fmt.Errorf("--dest-pvc-name is required when --create-pvc is set")
+		destPVCName = pvcName
 	}
 
 	// Create origin cluster clients
