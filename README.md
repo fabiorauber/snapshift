@@ -2,6 +2,8 @@
 
 A command-line utility for snapshotting and migrating PersistentVolumeClaims (PVCs) across Kubernetes clusters that share the same underlying storage system.
 
+[![CI](https://github.com/fabiorauber/snapshift/actions/workflows/ci.yml/badge.svg)](https://github.com/fabiorauber/snapshift/actions/workflows/ci.yml)
+
 ## Overview
 
 `snapshift` enables you to:
