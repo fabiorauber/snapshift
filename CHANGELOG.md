@@ -7,7 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-- None
+## [0.1.2] - 2025-12-09
+
+### Added
+- `--delete-snapshots` flag to automatically remove snapshots after PVC creation
 
 ## [0.1.1] - 2025-12-09
 
@@ -15,8 +18,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Automatic cleanup of created resources on operation failure
 - Default destination PVC name to match source PVC name (no longer required to specify `--dest-pvc-name`)
 - `--create-namespace` flag to automatically create destination namespace if it doesn't exist
-
-[0.1.1]: https://github.com/fabiorauber/snapshift/releases/tag/v0.1.1
 
 ## [0.1.0] - 2025-12-09
 
@@ -44,4 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ARCHITECTURE documentation explaining design decisions
 - Contributing guidelines
 
+[Unreleased]: https://github.com/fabiorauber/snapshift/compare/v0.1.2...HEAD
+[0.1.2]: https://github.com/fabiorauber/snapshift/compare/v0.1.1...v0.1.2
+[0.1.1]: https://github.com/fabiorauber/snapshift/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/fabiorauber/snapshift/releases/tag/v0.1.0

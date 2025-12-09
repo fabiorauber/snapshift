@@ -205,6 +205,18 @@ snapshift \
   --timeout 30m
 ```
 
+### Complete Migration with Automatic Cleanup
+
+```bash
+snapshift \
+  --pvc my-data \
+  --namespace default \
+  --origin-context origin \
+  --dest-context dest \
+  --create-pvc \
+  --delete-snapshots
+```
+
 ## Troubleshooting
 
 ### Error: "failed to get source PVC: not found"

@@ -61,8 +61,8 @@ snapshift \
   --pvc app-data \
   --namespace production \
   --create-pvc \
-  --dest-pvc-name app-data-restored \
   --dest-namespace production \
+  --delete-snapshots \
   --snapshot-name dr-backup-20231215-143022
 ```
 
@@ -166,7 +166,29 @@ snapshift \
   --timeout 45m
 ```
 
-## Scenario 8: Namespace Isolation
+## Scenario 8: Complete Migration with Cleanup
+
+Migrate data and automatically clean up snapshots:
+
+```bash
+snapshift \
+  --origin-context old-cluster \
+  --dest-context new-cluster \
+  --pvc application-data \
+  --namespace myapp \
+  --create-pvc \
+  --create-namespace \
+  --delete-snapshots
+```
+
+**What happens:**
+1. Creates snapshot in old-cluster
+2. Replicates to new-cluster
+3. Creates PVC from snapshot
+4. Deletes both snapshots automatically
+5. Leaves only the new PVC with data
+
+## Scenario 9: Namespace Isolation
 
 Copy PVC to a different namespace in the same or different cluster:
 

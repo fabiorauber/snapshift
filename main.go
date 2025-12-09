@@ -28,6 +28,7 @@ var (
 	destPVCName      string
 	destNamespace    string
 	createNamespace  bool
+	deleteSnapshots  bool
 	snapshotClass    string
 	timeout          time.Duration
 )
@@ -54,6 +55,7 @@ func init() {
 	rootCmd.Flags().StringVar(&destPVCName, "dest-pvc-name", "", "Name for the destination PVC (defaults to same as source PVC)")
 	rootCmd.Flags().StringVar(&destNamespace, "dest-namespace", "", "Destination namespace (defaults to same as source)")
 	rootCmd.Flags().BoolVar(&createNamespace, "create-namespace", false, "Create destination namespace if it does not exist")
+	rootCmd.Flags().BoolVar(&deleteSnapshots, "delete-snapshots", false, "Delete snapshots after PVC is created (only with --create-pvc)")
 	rootCmd.Flags().StringVar(&snapshotClass, "snapshot-class", "", "VolumeSnapshotClass name (optional, uses default if not specified)")
 	rootCmd.Flags().DurationVar(&timeout, "timeout", 10*time.Minute, "Timeout for snapshot operations")
 
@@ -200,13 +202,27 @@ func runSnapshift(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("failed to create destination PVC: %w", err)
 		}
 		fmt.Printf("Created PVC: %s/%s\n", pvc.Namespace, pvc.Name)
+
+		// Step 9: Optionally delete snapshots after PVC creation
+		if deleteSnapshots {
+			fmt.Printf("\nDeleting snapshots after PVC creation...\n")
+			if err := deleteSnapshotsAfterPVC(ctx, originSnapClient, destSnapClient, pvcNamespace, snapshotName, destNamespace, destSnapshotName, destContentName); err != nil {
+				fmt.Printf("⚠ Warning: Failed to delete snapshots: %v\n", err)
+				fmt.Printf("  You may need to manually clean up the snapshots\n")
+			}
+		}
 	}
 
 	fmt.Printf("\n✓ Successfully completed snapshot migration!\n")
-	fmt.Printf("  Origin snapshot: %s/%s\n", pvcNamespace, snapshotName)
-	fmt.Printf("  Destination snapshot: %s/%s\n", destNamespace, destSnapshotName)
+	if !deleteSnapshots {
+		fmt.Printf("  Origin snapshot: %s/%s\n", pvcNamespace, snapshotName)
+		fmt.Printf("  Destination snapshot: %s/%s\n", destNamespace, destSnapshotName)
+	}
 	if createPVC {
 		fmt.Printf("  Destination PVC: %s/%s\n", destNamespace, destPVCName)
+	}
+	if deleteSnapshots && createPVC {
+		fmt.Printf("  Snapshots deleted\n")
 	}
 
 	return nil
@@ -440,5 +456,35 @@ func ensureNamespace(ctx context.Context, client *kubernetes.Clientset, namespac
 	}
 
 	fmt.Printf("✓ Created namespace %s\n", namespace)
+	return nil
+}
+
+func deleteSnapshotsAfterPVC(ctx context.Context, originSnapClient, destSnapClient *snapshotclient.Clientset,
+	originNamespace, originSnapshotName, destNamespace, destSnapshotName, destContentName string) error {
+
+	// Delete destination snapshot first
+	fmt.Printf("  Deleting destination snapshot %s/%s...\n", destNamespace, destSnapshotName)
+	err := destSnapClient.SnapshotV1().VolumeSnapshots(destNamespace).Delete(ctx, destSnapshotName, metav1.DeleteOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to delete destination snapshot: %w", err)
+	}
+	fmt.Printf("  ✓ Deleted destination snapshot\n")
+
+	// Delete destination VolumeSnapshotContent
+	fmt.Printf("  Deleting destination VolumeSnapshotContent %s...\n", destContentName)
+	err = destSnapClient.SnapshotV1().VolumeSnapshotContents().Delete(ctx, destContentName, metav1.DeleteOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to delete destination VolumeSnapshotContent: %w", err)
+	}
+	fmt.Printf("  ✓ Deleted destination VolumeSnapshotContent\n")
+
+	// Delete origin snapshot
+	fmt.Printf("  Deleting origin snapshot %s/%s...\n", originNamespace, originSnapshotName)
+	err = originSnapClient.SnapshotV1().VolumeSnapshots(originNamespace).Delete(ctx, originSnapshotName, metav1.DeleteOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to delete origin snapshot: %w", err)
+	}
+	fmt.Printf("  ✓ Deleted origin snapshot\n")
+
 	return nil
 }

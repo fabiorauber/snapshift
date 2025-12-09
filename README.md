@@ -108,6 +108,20 @@ snapshift \
   --create-namespace
 ```
 
+### Complete Migration with Cleanup
+
+Migrate PVC and automatically clean up snapshots:
+
+```bash
+snapshift \
+  --origin-context origin-cluster \
+  --dest-context dest-cluster \
+  --pvc my-pvc \
+  --namespace default \
+  --create-pvc \
+  --delete-snapshots
+```
+
 ## Command-Line Flags
 
 | Flag | Description | Required | Default |
@@ -125,6 +139,7 @@ snapshift \
 | `--dest-pvc-name` | Name for the destination PVC | No | Same as source PVC |
 | `--dest-namespace` | Destination namespace | No | Same as source |
 | `--create-namespace` | Create destination namespace if it doesn't exist | No | `false` |
+| `--delete-snapshots` | Delete snapshots after PVC creation (requires `--create-pvc`) | No | `false` |
 | `--timeout` | Timeout for snapshot operations | No | `10m` |
 
 ## How It Works
