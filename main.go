@@ -55,7 +55,9 @@ func init() {
 	rootCmd.Flags().StringVar(&snapshotClass, "snapshot-class", "", "VolumeSnapshotClass name (optional, uses default if not specified)")
 	rootCmd.Flags().DurationVar(&timeout, "timeout", 10*time.Minute, "Timeout for snapshot operations")
 
-	rootCmd.MarkFlagRequired("pvc")
+	if err := rootCmd.MarkFlagRequired("pvc"); err != nil {
+		panic(fmt.Sprintf("failed to mark pvc flag as required: %v", err))
+	}
 }
 
 func main() {
