@@ -164,9 +164,8 @@ func runSnapshift(cmd *cobra.Command, args []string) error {
 	destContent, err := createVolumeSnapshotContent(ctx, destSnapClient, destContentName, destNamespace, destSnapshotName, snapshotHandle, originContent)
 	if err != nil {
 		return fmt.Errorf("failed to create destination VolumeSnapshotContent: %w", err)
-		destSnapshotCreated = true
-		return fmt.Errorf("failed to create destination VolumeSnapshotContent: %w", err)
 	}
+	destContentCreated = true
 	fmt.Printf("Created VolumeSnapshotContent: %s\n", destContent.Name)
 
 	// Step 6: Create VolumeSnapshot in destination cluster (pre-bound to the content)
@@ -175,6 +174,7 @@ func runSnapshift(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create destination snapshot: %w", err)
 	}
+	destSnapshotCreated = true
 	// Step 7: Wait for destination snapshot to be ready
 	fmt.Printf("Waiting for destination snapshot to be ready...\n")
 	_, err = waitForSnapshotReady(ctx, destSnapClient, destNamespace, destSnapshotName)
@@ -403,7 +403,6 @@ func cleanupOnFailure(ctx context.Context, originSnapClient, destSnapClient *sna
 		if err != nil {
 			fmt.Printf("  ✗ Failed to delete origin snapshot: %v\n", err)
 		} else {
-			fmt.Printf("  ✓ Deleted origin snapshot\n")
 			fmt.Printf("  ✓ Deleted origin snapshot\n")
 		}
 	}
