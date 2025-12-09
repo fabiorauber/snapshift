@@ -77,7 +77,6 @@ snapshift \
   --pvc application-state \
   --namespace myapp \
   --create-pvc \
-  --dest-pvc-name application-state \
   --dest-namespace myapp
 ```
 
@@ -122,8 +121,8 @@ for pvc_entry in "${PVCS[@]}"; do
     --pvc "$pvc" \
     --namespace "$namespace" \
     --create-pvc \
-    --dest-pvc-name "$pvc" \
     --dest-namespace "$namespace" \
+    --create-namespace \
     --timeout 20m
   
   if [ $? -eq 0 ]; then
@@ -148,8 +147,8 @@ snapshift \
   --dest-snapshot-name "financial-data-monthly-backup-2023-12" \
   --snapshot-class encrypted-snapclass \
   --create-pvc \
-  --dest-pvc-name "financial-data-restore-2023-12" \
-  --dest-namespace finance-backup
+  --dest-namespace finance-backup \
+  --create-namespace
 ```
 
 ## Scenario 7: Cross-Region Replication
@@ -178,8 +177,8 @@ snapshift \
   --pvc shared-data \
   --namespace team-a \
   --create-pvc \
-  --dest-pvc-name shared-data-copy \
-  --dest-namespace team-b
+  --dest-namespace team-b \
+  --create-namespace
 ```
 
 ## Error Recovery

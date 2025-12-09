@@ -92,8 +92,20 @@ snapshift \
   --pvc my-pvc \
   --namespace default \
   --snapshot-class csi-snapclass \
+  --create-pvc
+```
+
+### Create Destination Namespace Automatically
+
+```bash
+snapshift \
+  --origin-context origin-cluster \
+  --dest-context dest-cluster \
+  --pvc my-pvc \
+  --namespace production \
   --create-pvc \
-  --dest-pvc-name restored-pvc
+  --dest-namespace production \
+  --create-namespace
 ```
 
 ## Command-Line Flags
@@ -110,8 +122,9 @@ snapshift \
 | `--dest-snapshot-name` | Name for destination snapshot | No | Same as origin |
 | `--snapshot-class` | VolumeSnapshotClass name | No | Uses default class |
 | `--create-pvc` | Create a PVC from snapshot in destination | No | `false` |
-| `--dest-pvc-name` | Name for the destination PVC | Required if `--create-pvc` | - |
+| `--dest-pvc-name` | Name for the destination PVC | No | Same as source PVC |
 | `--dest-namespace` | Destination namespace | No | Same as source |
+| `--create-namespace` | Create destination namespace if it doesn't exist | No | `false` |
 | `--timeout` | Timeout for snapshot operations | No | `10m` |
 
 ## How It Works

@@ -79,8 +79,8 @@ snapshift \
   --pvc app-storage \
   --namespace prod-app \
   --create-pvc \
-  --dest-pvc-name app-storage \
-  --dest-namespace staging-app
+  --dest-namespace staging-app \
+  --create-namespace
 ```
 
 ## Step-by-Step Example
