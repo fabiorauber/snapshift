@@ -1,0 +1,23 @@
+# SnapShift Build and Development
+
+# Build binary
+snapshift
+
+# Go modules
+go.sum
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test files
+*.test
+*.out
+coverage.txt

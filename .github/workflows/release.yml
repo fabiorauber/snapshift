@@ -1,0 +1,120 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.21'
+
+    - name: Run tests
+      run: go test -v ./...
+
+    - name: Build binaries
+      run: |
+        # Linux AMD64
+        GOOS=linux GOARCH=amd64 go build -o snapshift-linux-amd64
+        
+        # Linux ARM64
+        GOOS=linux GOARCH=arm64 go build -o snapshift-linux-arm64
+        
+        # macOS AMD64
+        GOOS=darwin GOARCH=amd64 go build -o snapshift-darwin-amd64
+        
+        # macOS ARM64 (M1/M2)
+        GOOS=darwin GOARCH=arm64 go build -o snapshift-darwin-arm64
+        
+        # Windows AMD64
+        GOOS=windows GOARCH=amd64 go build -o snapshift-windows-amd64.exe
+
+    - name: Create checksums
+      run: |
+        sha256sum snapshift-* > checksums.txt
+
+    - name: Generate release notes
+      id: release_notes
+      run: |
+        VERSION=${GITHUB_REF#refs/tags/}
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        
+        cat > release_notes.md << 'EOF'
+        ## SnapShift ${{ env.VERSION }}
+        
+        ### Installation
+        
+        Download the appropriate binary for your platform below.
+        
+        #### Linux
+        ```bash
+        # AMD64
+        wget https://github.com/${{ github.repository }}/releases/download/${{ env.VERSION }}/snapshift-linux-amd64
+        chmod +x snapshift-linux-amd64
+        sudo mv snapshift-linux-amd64 /usr/local/bin/snapshift
+        
+        # ARM64
+        wget https://github.com/${{ github.repository }}/releases/download/${{ env.VERSION }}/snapshift-linux-arm64
+        chmod +x snapshift-linux-arm64
+        sudo mv snapshift-linux-arm64 /usr/local/bin/snapshift
+        ```
+        
+        #### macOS
+        ```bash
+        # Intel
+        wget https://github.com/${{ github.repository }}/releases/download/${{ env.VERSION }}/snapshift-darwin-amd64
+        chmod +x snapshift-darwin-amd64
+        sudo mv snapshift-darwin-amd64 /usr/local/bin/snapshift
+        
+        # Apple Silicon (M1/M2)
+        wget https://github.com/${{ github.repository }}/releases/download/${{ env.VERSION }}/snapshift-darwin-arm64
+        chmod +x snapshift-darwin-arm64
+        sudo mv snapshift-darwin-arm64 /usr/local/bin/snapshift
+        ```
+        
+        #### Windows
+        Download `snapshift-windows-amd64.exe` and add it to your PATH.
+        
+        ### Verification
+        
+        Verify the download with checksums:
+        ```bash
+        wget https://github.com/${{ github.repository }}/releases/download/${{ env.VERSION }}/checksums.txt
+        sha256sum -c checksums.txt
+        ```
+        
+        ### What's New
+        
+        See [CHANGELOG.md](CHANGELOG.md) for details.
+        EOF
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          snapshift-linux-amd64
+          snapshift-linux-arm64
+          snapshift-darwin-amd64
+          snapshift-darwin-arm64
+          snapshift-windows-amd64.exe
+          checksums.txt
+        body_path: release_notes.md
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
