@@ -203,8 +203,17 @@ func runSnapshift(cmd *cobra.Command, args []string) error {
 		}
 		fmt.Printf("Created PVC: %s/%s\n", pvc.Namespace, pvc.Name)
 
-		// Step 9: Optionally delete snapshots after PVC creation
+		// Step 9: Wait for PVC to be bound before deleting snapshots
 		if deleteSnapshots {
+			fmt.Printf("Waiting for PVC to be bound before deleting snapshots...\n")
+			err = waitForPVCBound(ctx, destK8sClient, destNamespace, destPVCName)
+			if err != nil {
+				fmt.Printf("⚠ Warning: PVC may not be bound yet: %v\n", err)
+				fmt.Printf("  Proceeding with snapshot deletion anyway...\n")
+			} else {
+				fmt.Printf("PVC is bound!\n")
+			}
+
 			fmt.Printf("\nDeleting snapshots after PVC creation...\n")
 			if err := deleteSnapshotsAfterPVC(ctx, originSnapClient, destSnapClient, pvcNamespace, snapshotName, destNamespace, destSnapshotName, destContentName); err != nil {
 				fmt.Printf("⚠ Warning: Failed to delete snapshots: %v\n", err)
@@ -351,6 +360,35 @@ func waitForSnapshotReady(ctx context.Context, client *snapshotclient.Clientset,
 			}
 
 			fmt.Printf("  Snapshot status: ReadyToUse=%v\n", snapshot.Status != nil && snapshot.Status.ReadyToUse != nil && *snapshot.Status.ReadyToUse)
+		}
+	}
+}
+
+func waitForPVCBound(ctx context.Context, client *kubernetes.Clientset, namespace, pvcName string) error {
+	fmt.Printf("Waiting for PVC %s to be bound...\n", pvcName)
+	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-ticker.C:
+			pvc, err := client.CoreV1().PersistentVolumeClaims(namespace).Get(ctx, pvcName, metav1.GetOptions{})
+			if err != nil {
+				return err
+			}
+
+			if pvc.Status.Phase == corev1.ClaimBound {
+				fmt.Printf("  PVC is bound\n")
+				return nil
+			}
+
+			if pvc.Status.Phase == corev1.ClaimLost {
+				return fmt.Errorf("PVC is in Lost phase")
+			}
+
+			fmt.Printf("  PVC status: Phase=%s\n", pvc.Status.Phase)
 		}
 	}
 }
