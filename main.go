@@ -27,6 +27,7 @@ var (
 	createPVC        bool
 	destPVCName      string
 	destNamespace    string
+	createNamespace  bool
 	snapshotClass    string
 	timeout          time.Duration
 )
@@ -52,6 +53,7 @@ func init() {
 	rootCmd.Flags().BoolVar(&createPVC, "create-pvc", false, "Create a PVC from the snapshot in destination cluster")
 	rootCmd.Flags().StringVar(&destPVCName, "dest-pvc-name", "", "Name for the destination PVC (defaults to same as source PVC)")
 	rootCmd.Flags().StringVar(&destNamespace, "dest-namespace", "", "Destination namespace (defaults to same as source)")
+	rootCmd.Flags().BoolVar(&createNamespace, "create-namespace", false, "Create destination namespace if it does not exist")
 	rootCmd.Flags().StringVar(&snapshotClass, "snapshot-class", "", "VolumeSnapshotClass name (optional, uses default if not specified)")
 	rootCmd.Flags().DurationVar(&timeout, "timeout", 10*time.Minute, "Timeout for snapshot operations")
 
@@ -157,6 +159,13 @@ func runSnapshift(cmd *cobra.Command, args []string) error {
 	}
 	snapshotHandle := *originContent.Status.SnapshotHandle
 	fmt.Printf("Found snapshot handle: %s\n", snapshotHandle)
+
+	// Step 4.5: Ensure destination namespace exists
+	if createNamespace {
+		if err := ensureNamespace(ctx, destK8sClient, destNamespace); err != nil {
+			return fmt.Errorf("failed to ensure destination namespace: %w", err)
+		}
+	}
 
 	// Step 5: Create VolumeSnapshotContent in destination cluster (with same snapshotHandle)
 	fmt.Printf("Creating VolumeSnapshotContent in destination cluster...\n")
@@ -407,4 +416,30 @@ func cleanupOnFailure(ctx context.Context, originSnapClient, destSnapClient *sna
 		}
 	}
 	fmt.Printf("Cleanup completed.\n\n")
+}
+
+func ensureNamespace(ctx context.Context, client *kubernetes.Clientset, namespace string) error {
+	// Check if namespace exists
+	_, err := client.CoreV1().Namespaces().Get(ctx, namespace, metav1.GetOptions{})
+	if err == nil {
+		// Namespace already exists
+		fmt.Printf("Destination namespace %s already exists\n", namespace)
+		return nil
+	}
+
+	// Create namespace if it doesn't exist
+	fmt.Printf("Creating destination namespace %s...\n", namespace)
+	ns := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: namespace,
+		},
+	}
+
+	_, err = client.CoreV1().Namespaces().Create(ctx, ns, metav1.CreateOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to create namespace: %w", err)
+	}
+
+	fmt.Printf("✓ Created namespace %s\n", namespace)
+	return nil
 }
