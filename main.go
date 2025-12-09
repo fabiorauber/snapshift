@@ -191,7 +191,6 @@ func runSnapshift(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed waiting for destination snapshot: %w", err)
 	}
 	fmt.Printf("Destination snapshot is ready!\n")
-	fmt.Printf("Destination snapshot is ready!\n")
 
 	// Step 8: Optionally create PVC from snapshot
 	if createPVC {
