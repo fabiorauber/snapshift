@@ -10,6 +10,7 @@ import (
 	snapshotclient "github.com/kubernetes-csi/external-snapshotter/client/v6/clientset/versioned"
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
@@ -117,7 +118,7 @@ func runSnapshift(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to get source PVC: %w", err)
 	}
-	storageSize := sourcePVC.Spec.Resources.Requests[corev1.ResourceStorage]
+	storageSize := resolvedPVCStorageSize(sourcePVC)
 	fmt.Printf("Found PVC with size: %s\n", storageSize.String())
 
 	// Step 2: Create snapshot in origin cluster
@@ -395,7 +396,7 @@ func waitForPVCBound(ctx context.Context, client *kubernetes.Clientset, namespac
 
 func createPVCFromSnapshot(ctx context.Context, client *kubernetes.Clientset, namespace, pvcName, snapshotName string, sourcePVC *corev1.PersistentVolumeClaim) (*corev1.PersistentVolumeClaim, error) {
 	// Get the storage size from source PVC
-	storageSize := sourcePVC.Spec.Resources.Requests[corev1.ResourceStorage]
+	storageSize := resolvedPVCStorageSize(sourcePVC)
 
 	pvc := &corev1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
@@ -423,6 +424,16 @@ func createPVCFromSnapshot(ctx context.Context, client *kubernetes.Clientset, na
 	}
 
 	return client.CoreV1().PersistentVolumeClaims(namespace).Create(ctx, pvc, metav1.CreateOptions{})
+}
+
+func resolvedPVCStorageSize(sourcePVC *corev1.PersistentVolumeClaim) resource.Quantity {
+	requestedSize := sourcePVC.Spec.Resources.Requests[corev1.ResourceStorage]
+	boundCapacity, hasBoundCapacity := sourcePVC.Status.Capacity[corev1.ResourceStorage]
+	if hasBoundCapacity && boundCapacity.Cmp(requestedSize) > 0 {
+		return boundCapacity
+	}
+
+	return requestedSize
 }
 
 func stringPtr(s string) *string {
