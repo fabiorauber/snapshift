@@ -58,7 +58,7 @@ func init() {
 	rootCmd.Flags().BoolVar(&createNamespace, "create-namespace", false, "Create destination namespace if it does not exist")
 	rootCmd.Flags().BoolVar(&deleteSnapshots, "delete-snapshots", false, "Delete snapshots after PVC is created (only with --create-pvc)")
 	rootCmd.Flags().StringVar(&snapshotClass, "snapshot-class", "", "VolumeSnapshotClass name (optional, uses default if not specified)")
-	rootCmd.Flags().DurationVar(&timeout, "timeout", 10*time.Minute, "Timeout for snapshot operations")
+	rootCmd.Flags().DurationVar(&timeout, "timeout", 1*time.Hour, "Timeout for snapshot operations")
 
 	if err := rootCmd.MarkFlagRequired("pvc"); err != nil {
 		panic(fmt.Sprintf("failed to mark pvc flag as required: %v", err))
