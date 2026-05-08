@@ -109,6 +109,7 @@ func runSnapshift(cmd *cobra.Command, args []string) error {
 		originSnapshotCreated = false
 		destContentCreated    = false
 		destSnapshotCreated   = false
+		snapshotsDeleted      = false
 		destContentName       string
 	)
 
@@ -204,21 +205,21 @@ func runSnapshift(cmd *cobra.Command, args []string) error {
 		}
 		fmt.Printf("Created PVC: %s/%s\n", pvc.Namespace, pvc.Name)
 
+		fmt.Printf("Waiting for PVC to be bound...\n")
+		err = waitForPVCBound(ctx, destK8sClient, destNamespace, destPVCName)
+		if err != nil {
+			return fmt.Errorf("destination PVC did not bind: %w", err)
+		}
+		fmt.Printf("PVC is bound!\n")
+
 		// Step 9: Wait for PVC to be bound before deleting snapshots
 		if deleteSnapshots {
-			fmt.Printf("Waiting for PVC to be bound before deleting snapshots...\n")
-			err = waitForPVCBound(ctx, destK8sClient, destNamespace, destPVCName)
-			if err != nil {
-				fmt.Printf("⚠ Warning: PVC may not be bound yet: %v\n", err)
-				fmt.Printf("  Proceeding with snapshot deletion anyway...\n")
-			} else {
-				fmt.Printf("PVC is bound!\n")
-			}
-
 			fmt.Printf("\nDeleting snapshots after PVC creation...\n")
 			if err := deleteSnapshotsAfterPVC(ctx, originSnapClient, destSnapClient, pvcNamespace, snapshotName, destNamespace, destSnapshotName, destContentName); err != nil {
 				fmt.Printf("⚠ Warning: Failed to delete snapshots: %v\n", err)
 				fmt.Printf("  You may need to manually clean up the snapshots\n")
+			} else {
+				snapshotsDeleted = true
 			}
 		}
 	}
@@ -231,7 +232,7 @@ func runSnapshift(cmd *cobra.Command, args []string) error {
 	if createPVC {
 		fmt.Printf("  Destination PVC: %s/%s\n", destNamespace, destPVCName)
 	}
-	if deleteSnapshots && createPVC {
+	if snapshotsDeleted {
 		fmt.Printf("  Snapshots deleted\n")
 	}
 
