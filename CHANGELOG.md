@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.4] - 2026-05-08
+
+### Fixed
+- Destination PVC not bound after migration is now a fatal error instead of a warning; the tool no longer reports success when the PVC remains in `Pending` phase
+- "Snapshots deleted" summary line is no longer printed when snapshot cleanup failed
+
+### Changed
+- Default `--timeout` increased from `10m` to `1h` to accommodate large data migrations
+
+## [0.1.3] - 2026-04-22
+
+### Fixed
+- Destination PVC is now created using the source PVC's actual bound capacity instead of the requested size, avoiding under-provisioning when the provisioner rounded up the volume
+
 ## [0.1.2] - 2025-12-09
 
 ### Added
@@ -45,7 +59,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ARCHITECTURE documentation explaining design decisions
 - Contributing guidelines
 
-[Unreleased]: https://github.com/fabiorauber/snapshift/compare/v0.1.2...HEAD
+[Unreleased]: https://github.com/fabiorauber/snapshift/compare/v0.1.4...HEAD
+[0.1.4]: https://github.com/fabiorauber/snapshift/compare/v0.1.3...v0.1.4
+[0.1.3]: https://github.com/fabiorauber/snapshift/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/fabiorauber/snapshift/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/fabiorauber/snapshift/compare/v0.1.0...v0.1.1
+[0.1.0]: https://github.com/fabiorauber/snapshift/releases/tag/v0.1.0
 [0.1.0]: https://github.com/fabiorauber/snapshift/releases/tag/v0.1.0
