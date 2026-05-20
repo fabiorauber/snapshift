@@ -190,7 +190,7 @@ func runSnapshift(cmd *cobra.Command, args []string) error {
 	destSnapshotCreated = true
 	// Step 7: Wait for destination snapshot to be ready
 	fmt.Printf("Waiting for destination snapshot to be ready...\n")
-	_, err = waitForSnapshotReady(ctx, destSnapClient, destNamespace, destSnapshotName)
+	destSnapshot, err := waitForSnapshotReady(ctx, destSnapClient, destNamespace, destSnapshotName)
 	if err != nil {
 		return fmt.Errorf("failed waiting for destination snapshot: %w", err)
 	}
@@ -199,7 +199,7 @@ func runSnapshift(cmd *cobra.Command, args []string) error {
 	// Step 8: Optionally create PVC from snapshot
 	if createPVC {
 		fmt.Printf("Creating PVC %s/%s from snapshot...\n", destNamespace, destPVCName)
-		pvc, err := createPVCFromSnapshot(ctx, destK8sClient, destNamespace, destPVCName, destSnapshotName, sourcePVC)
+		pvc, err := createPVCFromSnapshot(ctx, destK8sClient, destNamespace, destPVCName, destSnapshotName, sourcePVC, destSnapshot)
 		if err != nil {
 			return fmt.Errorf("failed to create destination PVC: %w", err)
 		}
@@ -395,9 +395,18 @@ func waitForPVCBound(ctx context.Context, client *kubernetes.Clientset, namespac
 	}
 }
 
-func createPVCFromSnapshot(ctx context.Context, client *kubernetes.Clientset, namespace, pvcName, snapshotName string, sourcePVC *corev1.PersistentVolumeClaim) (*corev1.PersistentVolumeClaim, error) {
-	// Get the storage size from source PVC
+func createPVCFromSnapshot(ctx context.Context, client *kubernetes.Clientset, namespace, pvcName, snapshotName string, sourcePVC *corev1.PersistentVolumeClaim, snapshot *snapshotv1.VolumeSnapshot) (*corev1.PersistentVolumeClaim, error) {
+	// Prefer the snapshot's RestoreSize to avoid CSI size mismatch errors (e.g. vSphere CSI
+	// requires the PVC size to exactly match the snapshot size). Fall back to the source PVC
+	// size when RestoreSize is not reported by the driver.
 	storageSize := resolvedPVCStorageSize(sourcePVC)
+	if snapshot.Status != nil && snapshot.Status.RestoreSize != nil && !snapshot.Status.RestoreSize.IsZero() {
+		restoreSize := *snapshot.Status.RestoreSize
+		if restoreSize.Cmp(storageSize) != 0 {
+			fmt.Printf("  Using snapshot RestoreSize %s instead of source PVC size %s\n", restoreSize.String(), storageSize.String())
+			storageSize = restoreSize
+		}
+	}
 
 	pvc := &corev1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
